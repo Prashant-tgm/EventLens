@@ -1,0 +1,35 @@
+# Python bytecode & cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Local environment configuration (contains sensitive passwords/keys)
+.env
+.env.*
+
+# Python virtual environments (local)
+venv/
+.venv/
+env/
+
+# IDE settings & OS system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Docker-generated local volume data & temporary storage
+postgres_data/
+redis_data/
+minio_data/
+.minio.sys/
+backend/storage/
+
+# Streamlit local configuration
+.streamlit/
+storage/
+.LOCAL_TESTING_AND_DEPLOYMENT.md
+
+.implementation_plan.md
+.E:\Projects\eventSNAP1\backend\.env
