@@ -1,0 +1,6 @@
+# AI / Computer Vision dependencies — install in environments with GPU or model files
+insightface>=0.7.3
+onnxruntime>=1.17
+opencv-python-headless>=4.9,<5.0
+numpy>=1.26,<2.0
+scikit-learn>=1.4,<2.0

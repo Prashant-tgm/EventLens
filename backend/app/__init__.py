@@ -1,0 +1,1 @@
+# EventSnap AI Backend package
