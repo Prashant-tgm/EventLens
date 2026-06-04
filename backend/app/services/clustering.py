@@ -12,7 +12,8 @@ from sklearn.cluster import DBSCAN
 from sqlalchemy.orm import Session
 
 from app.db.session import SessionLocal
-from app.models.face import Face, Person, PersonPhoto
+# Import all models via db.base so SQLAlchemy resolves all relationships
+from app.db.base import Face, Person, PersonPhoto
 from app.services.pipeline import celery_app          # single Celery instance
 
 logger = logging.getLogger(__name__)
