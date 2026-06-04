@@ -29,18 +29,13 @@ def show_landing_page():
         <div class="landing-hero-glow"></div>
         <div class="landing-hero-grid-bg"></div>
         <div class="landing-hero-content slide-up">
-            {logo_img_html}
-            <div class="landing-hero-badge">
-                <span class="landing-badge-dot"></span>
-                AI-Powered &middot; Real-Time &middot; Secure
-            </div>
             <h1 class="landing-hero-title">
-                Every Face.<br/>Every Photo.<br/>
+                Every Face.<br/>Own Photo.<br/>
                 <span class="landing-gradient-text">Instantly Found.</span>
             </h1>
             <div class="landing-hero-desc">
                 EventLens uses cutting-edge facial recognition to match guests
-                with their event photos in under <strong style="color:#F8FAFC;">2&nbsp;seconds</strong>.
+                with their event photos in under <strong style="color:#F8FAFC;">10&nbsp;seconds</strong>.
                 Upload once. Let AI do the rest.
             </div>
         </div>
@@ -66,17 +61,17 @@ def show_landing_page():
     st.markdown(f"""
     <div class="landing-hero-stats-row">
         <div class="landing-hero-stat">
-            <span class="landing-hero-stat-value">2s</span>
+            <span class="landing-hero-stat-value">10s</span>
             <span class="landing-hero-stat-label">Avg. Search Time</span>
         </div>
         <div class="landing-hero-stat-divider"></div>
         <div class="landing-hero-stat">
-            <span class="landing-hero-stat-value">99.7%</span>
+            <span class="landing-hero-stat-value">95%</span>
             <span class="landing-hero-stat-label">Face Match Accuracy</span>
         </div>
         <div class="landing-hero-stat-divider"></div>
         <div class="landing-hero-stat">
-            <span class="landing-hero-stat-value">50K+</span>
+            <span class="landing-hero-stat-value">...</span>
             <span class="landing-hero-stat-label">Photos Processed</span>
         </div>
     </div>
@@ -85,7 +80,7 @@ def show_landing_page():
     # ── Trusted By ───────────────────────────────────────────────────────
     st.markdown("""
     <div class="landing-section" style="padding-top: 32px; padding-bottom: 24px;">
-        <div class="landing-trusted-label">TRUSTED BY EVENT PROFESSIONALS WORLDWIDE</div>
+        <div class="landing-trusted-label">WANT TO MAKE A TRUST</div>
         <div class="landing-logo-bar">
             <span>StudioPro</span>
             <span>EventCo</span>
@@ -112,12 +107,12 @@ def show_landing_page():
     """, unsafe_allow_html=True)
 
     features = [
-        ("\u26A1", "Lightning-Fast Search",
+        ("\u26A1", "personal Search",
          "Guests upload a selfie and find every photo of themselves "
-         "in under 2 seconds using pgvector cosine similarity.",
+         "in under 10 seconds using pgvector cosine similarity.",
          "#7C3AED"),
         ("\U0001F9E0", "AI Face Clustering",
-         "HDBSCAN clusters faces across thousands of photos so each "
+         "DBSCAN clusters faces across thousands of photos so each "
          "person's gallery is built automatically.",
          "#3B82F6"),
         ("\U0001F512", "Event-Isolated Security",
@@ -126,7 +121,7 @@ def show_landing_page():
          "#10B981"),
         ("\U0001F4F1", "QR Code Guest Portal",
          "Generate a unique QR code per event. Guests scan, snap a "
-         "selfie, and download their photos instantly.",
+         "selfie, and download their photos in a cleaner way.",
          "#F59E0B"),
         ("\u2601\uFE0F", "Cloud-Native Pipeline",
          "Direct-to-S3 uploads via pre-signed URLs. Celery workers "
@@ -172,13 +167,13 @@ def show_landing_page():
          "pre-signed URLs. No size limits, no bottlenecks."),
         ("02", "\U0001F9EC", "AI Processes Faces",
          "RetinaFace detects faces, ArcFace generates 512-D embeddings, "
-         "and HDBSCAN clusters them automatically."),
+         "and DBSCAN clusters them automatically."),
         ("03", "\U0001F4F1", "Share QR Code",
          "Generate a unique event QR code. Guests scan it from "
          "their phone. No downloads, no signups."),
         ("04", "\U0001F389", "Guests Get Photos",
-         "One selfie. Two seconds. Every matching photo is ready to "
-         "download and share instantly."),
+         "One selfie. Every matching photo is ready to "
+         "download in original quality."),
     ]
 
     step_cols = st.columns(4)
@@ -193,44 +188,44 @@ def show_landing_page():
             </div>
             """, unsafe_allow_html=True)
 
-    # ── Testimonials Section ─────────────────────────────────────────────
-    st.markdown(f"""
-    <div class="landing-section-header" style="padding-top:56px;">
-        <div class="landing-section-tag">TESTIMONIALS</div>
-        <div class="landing-section-title">
-            Loved by<br/>
-            <span class="landing-gradient-text">event professionals</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    # # ── Testimonials Section ─────────────────────────────────────────────
+    # st.markdown(f"""
+    # <div class="landing-section-header" style="padding-top:56px;">
+    #     <div class="landing-section-tag">TESTIMONIALS</div>
+    #     <div class="landing-section-title">
+    #         Loved by<br/>
+    #         <span class="landing-gradient-text">event professionals</span>
+    #     </div>
+    # </div>
+    # """, unsafe_allow_html=True)
 
-    testimonials = [
-        ("EventLens saved us 12+ hours of manual photo sorting at "
-         "a 500-guest corporate gala. Guests loved the instant delivery.",
-         "Sarah K.", "Event Director, CorpEvents"),
-        ("The QR code flow is genius. Guests pull out their phone, "
-         "snap a selfie, and have all their photos in seconds. Pure magic.",
-         "James M.", "Lead Photographer, StudioPro"),
-        ("We process thousands of wedding photos. The AI clustering "
-         "is incredibly accurate, even with varied lighting conditions.",
-         "Priya R.", "Founder, WeddingLens"),
-    ]
+    # testimonials = [
+    #     ("EventLens saved us 12+ hours of manual photo sorting at "
+    #      "a 500-guest corporate gala. Guests loved the instant delivery.",
+    #      "Sarah K.", "Event Director, CorpEvents"),
+    #     ("The QR code flow is genius. Guests pull out their phone, "
+    #      "snap a selfie, and have all their photos in seconds. Pure magic.",
+    #      "James M.", "Lead Photographer, StudioPro"),
+    #     ("We process thousands of wedding photos. The AI clustering "
+    #      "is incredibly accurate, even with varied lighting conditions.",
+    #      "Priya R.", "Founder, WeddingLens"),
+    # ]
 
-    t_cols = st.columns(3)
-    for i, (quote, author, role) in enumerate(testimonials):
-        with t_cols[i]:
-            st.markdown(f"""
-            <div class="landing-testimonial-card">
-                <div class="landing-testimonial-stars">\u2605\u2605\u2605\u2605\u2605</div>
-                <div class="landing-testimonial-quote">&ldquo;{quote}&rdquo;</div>
-                <div class="landing-testimonial-author">
-                    <div>
-                        <div class="landing-testimonial-name">{author}</div>
-                        <div class="landing-testimonial-role">{role}</div>
-                    </div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+    # t_cols = st.columns(3)
+    # for i, (quote, author, role) in enumerate(testimonials):
+    #     with t_cols[i]:
+    #         st.markdown(f"""
+    #         <div class="landing-testimonial-card">
+    #             <div class="landing-testimonial-stars">\u2605\u2605\u2605\u2605\u2605</div>
+    #             <div class="landing-testimonial-quote">&ldquo;{quote}&rdquo;</div>
+    #             <div class="landing-testimonial-author">
+    #                 <div>
+    #                     <div class="landing-testimonial-name">{author}</div>
+    #                     <div class="landing-testimonial-role">{role}</div>
+    #                 </div>
+    #             </div>
+    #         </div>
+    #         """, unsafe_allow_html=True)
 
     # ── Final CTA Section ────────────────────────────────────────────────
     st.markdown(f"""
