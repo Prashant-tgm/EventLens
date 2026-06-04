@@ -29,7 +29,7 @@ backend/storage/
 # Streamlit local configuration
 .streamlit/
 storage/
-.LOCAL_TESTING_AND_DEPLOYMENT.md
+LOCAL_TESTING_AND_DEPLOYMENT.md
 
-.implementation_plan.md
-.E:\Projects\eventSNAP1\backend\.env
+implementation_plan.md
+
