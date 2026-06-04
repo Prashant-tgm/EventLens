@@ -25,7 +25,7 @@ _defaults = {
     "email": "",
     "user_role": "",
     "user_id": None,
-    "current_page": "guest_portal",
+    "current_page": "login",
     "current_event_id": None,
     "workspace_tab": "Overview",
 }
@@ -38,66 +38,31 @@ query_params = st.query_params
 event_id_param = query_params.get("event_id")
 
 
-# ── Guest Portal (no sidebar, full-width) ────────────────────────────────
-if not st.session_state.authenticated and (
-    event_id_param or st.session_state.current_page == "guest_portal"
-):
-    # Minimal sidebar for guest mode
-    with st.sidebar:
+# ── Header Navigation for Unauthenticated ────────────────────────────────
+if not st.session_state.authenticated:
+    c_logo, _ = st.columns([3, 7])
+    with c_logo:
         st.markdown(get_logo_html(), unsafe_allow_html=True)
-        st.caption("AI-Powered Photo Retrieval")
-        st.divider()
 
-        mode = st.radio(
-            "Mode",
-            ["🔍 Guest Finder", "🔐 Photographer Portal"],
-            label_visibility="collapsed",
-        )
+    st.markdown("<hr style='margin: 8px 0 24px 0; opacity: 0.3;'>", unsafe_allow_html=True)
 
-        if mode == "🔐 Photographer Portal":
-            st.session_state.current_page = "login"
-            st.rerun()
-
-    from components.guest import show_guest_portal
-    show_guest_portal(event_id_param)
-
-# ── Auth Page (not logged in, selected photographer portal) ──────────────
-elif not st.session_state.authenticated:
-    with st.sidebar:
-        st.markdown(get_logo_html(), unsafe_allow_html=True)
-        st.caption("AI-Powered Photo Retrieval")
-        st.divider()
-
-        mode = st.radio(
-            "Mode",
-            ["🔐 Photographer Portal", "🔍 Guest Finder"],
-            label_visibility="collapsed",
-        )
-
-        if mode == "🔍 Guest Finder":
-            st.session_state.current_page = "guest_portal"
-            st.rerun()
-
-    from components.auth import show_auth_page
-    show_auth_page()
+    if event_id_param:
+        from components.guest import show_guest_portal
+        show_guest_portal(event_id_param)
+    else:
+        from components.auth import show_auth_page
+        show_auth_page()
 
 # ── Authenticated Workspace ──────────────────────────────────────────────
 else:
-    # ── Sidebar Navigation (Linear-style) ────────────────────────────────
-    with st.sidebar:
-        # Brand
+    c_logo, c_nav, c_user = st.columns([2, 5, 3])
+    with c_logo:
         st.markdown(get_logo_html(), unsafe_allow_html=True)
-
-        st.divider()
-
-        # Navigation
+    with c_nav:
         nav_items = ["📊 Dashboard", "📁 Events", "📈 Analytics"]
-
-        # Add admin nav for superadmin
         if st.session_state.user_role == "superadmin":
             nav_items.append("⚙️ Admin")
 
-        # Map display labels to page keys
         nav_map = {
             "📊 Dashboard": "dashboard",
             "📁 Events": "events",
@@ -105,7 +70,6 @@ else:
             "⚙️ Admin": "admin",
         }
 
-        # Determine current selection
         current_nav = None
         for label, page_key in nav_map.items():
             if st.session_state.current_page == page_key:
@@ -118,58 +82,33 @@ else:
             "Navigation",
             nav_items,
             index=nav_items.index(current_nav) if current_nav in nav_items else 0,
+            horizontal=True,
             label_visibility="collapsed",
+            key="auth_header_nav"
         )
-
         st.session_state.current_page = nav_map.get(selection, "dashboard")
 
-        # If viewing event workspace, show back button
-        if st.session_state.current_event_id:
-            st.divider()
+    with c_user:
+        cu1, cu2 = st.columns([2.2, 1])
+        with cu1:
             st.markdown(f"""
-            <div style="padding: 4px 12px; background: rgba(124,58,237,0.12);
-                        border-radius: 8px; border: 1px solid rgba(124,58,237,0.2);">
-                <div style="font-size: 0.7rem; color: #94A3B8; text-transform: uppercase;
-                            letter-spacing: 0.05em; font-weight: 600;">Active Workspace</div>
-                <div style="font-size: 0.9rem; color: #F8FAFC; font-weight: 600; margin-top: 2px;">
-                    {st.session_state.current_event_id}
+            <div style="text-align: right; padding-top: 4px;">
+                <div style="font-size: 0.8rem; color: #F8FAFC; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    {st.session_state.email}
+                </div>
+                <div style="font-size: 0.65rem; color: #64748B; text-transform: uppercase; letter-spacing: 0.05em;">
+                    {st.session_state.user_role}
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("← Back to Events", use_container_width=True):
-                st.session_state.current_event_id = None
-                st.session_state.current_page = "events"
+        with cu2:
+            if st.button("Log Out", key="header_logout", use_container_width=True):
+                api_client.clear_token()
+                for key in _defaults:
+                    st.session_state[key] = _defaults[key]
                 st.rerun()
 
-        # Spacer + user info at bottom
-        st.divider()
-        st.markdown(f"""
-        <div style="padding: 8px 0;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <div style="width: 32px; height: 32px; border-radius: 8px;
-                            background: linear-gradient(135deg, #7C3AED, #8B5CF6);
-                            display: flex; align-items: center; justify-content: center;
-                            color: white; font-weight: 700; font-size: 0.8rem;">
-                    {st.session_state.email[0].upper() if st.session_state.email else "?"}
-                </div>
-                <div>
-                    <div style="font-size: 0.8rem; color: #F8FAFC; font-weight: 500;">
-                        {st.session_state.email}
-                    </div>
-                    <div style="font-size: 0.65rem; color: #64748B; text-transform: uppercase;
-                                letter-spacing: 0.05em;">
-                        {st.session_state.user_role}
-                    </div>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        if st.button("Log Out", use_container_width=True):
-            api_client.clear_token()
-            for key in _defaults:
-                st.session_state[key] = _defaults[key]
-            st.rerun()
+    st.markdown("<hr style='margin: 8px 0 24px 0; opacity: 0.3;'>", unsafe_allow_html=True)
 
     # ── Main Content Routing ─────────────────────────────────────────────
     if st.session_state.current_event_id:

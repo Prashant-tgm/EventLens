@@ -20,49 +20,56 @@ def show_events_management():
         </div>
         """, unsafe_allow_html=True)
 
+    if "show_create_event_form" not in st.session_state:
+        st.session_state.show_create_event_form = False
+
     with action_col:
         st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
-        show_create = st.button("+ Create Event", use_container_width=True)
+        if st.button("+ Create Event", use_container_width=True):
+            st.session_state.show_create_event_form = not st.session_state.show_create_event_form
 
     # ── Create Event Form (slide-down panel) ─────────────────────────────
-    if show_create:
+    if st.session_state.show_create_event_form:
         st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
         with st.expander("📁 New Event", expanded=True):
-            c1, c2 = st.columns(2)
-            with c1:
-                name = st.text_input("Event Name", placeholder="Annual Gala 2026",
-                                     key="create_name")
-                event_type = st.selectbox("Event Type",
-                                          ["Wedding", "College Fest", "Conference",
-                                           "Marathon", "Birthday", "Corporate", "Other"],
-                                          key="create_type")
-            with c2:
-                date_val = st.date_input("Event Date", min_value=datetime.date.today(),
-                                         key="create_date")
-                location = st.text_input("Location", placeholder="Grand Ballroom, NYC",
-                                         key="create_location")
+            with st.form("create_event_form", clear_on_submit=False):
+                c1, c2 = st.columns(2)
+                with c1:
+                    name = st.text_input("Event Name", placeholder="Annual Gala 2026",
+                                         key="create_name")
+                    event_type = st.selectbox("Event Type",
+                                              ["Wedding", "College Fest", "Conference",
+                                               "Marathon", "Birthday", "Corporate", "Other"],
+                                              key="create_type")
+                with c2:
+                    date_val = st.date_input("Event Date", min_value=datetime.date.today(),
+                                             key="create_date")
+                    location = st.text_input("Location", placeholder="Grand Ballroom, NYC",
+                                             key="create_location")
 
-            description = st.text_area("Description (optional)",
-                                       placeholder="Brief description of the event...",
-                                       key="create_desc", height=80)
+                description = st.text_area("Description (optional)",
+                                           placeholder="Brief description of the event...",
+                                           key="create_desc", height=80)
 
-            if st.button("Create Event →", key="btn_create_event", use_container_width=True):
-                if not name:
-                    st.error("Event name is required.")
-                else:
-                    with st.spinner("Creating event..."):
-                        try:
-                            res = api_client.create_event(
-                                name=name,
-                                date_str=date_val.isoformat(),
-                                event_type=event_type,
-                                location=location,
-                                description=description,
-                            )
-                            st.success(f"Event created! ID: {res['event_id']}")
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Failed to create event: {e}")
+                submit_btn = st.form_submit_button("Create Event →", use_container_width=True)
+                if submit_btn:
+                    if not name:
+                        st.error("Event name is required.")
+                    else:
+                        with st.spinner("Creating event..."):
+                            try:
+                                res = api_client.create_event(
+                                    name=name,
+                                    date_str=date_val.isoformat(),
+                                    event_type=event_type,
+                                    location=location,
+                                    description=description,
+                                )
+                                st.success(f"Event created! ID: {res['event_id']}")
+                                st.session_state.show_create_event_form = False
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Failed to create event: {e}")
 
     st.markdown("<div style='height: 24px;'></div>", unsafe_allow_html=True)
 

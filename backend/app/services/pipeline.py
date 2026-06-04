@@ -23,8 +23,9 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.storage import get_storage_manager
 from app.db.session import SessionLocal
-from app.models.face import Face, Upload
-from app.models.photo import Photo
+# Import all models via db.base so SQLAlchemy resolves all relationships
+# (Face has relationship("Event"), so Event must be registered first)
+from app.db.base import Face, Upload, Photo
 
 logger = logging.getLogger(__name__)
 settings = get_settings()

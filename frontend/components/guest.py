@@ -5,6 +5,7 @@ import streamlit as st
 from PIL import Image
 import io
 import time
+import requests
 from utils.api_client import api_client
 from utils.theme import pipeline_stage_html
 
@@ -17,7 +18,7 @@ def show_guest_portal(event_id_param: str = None):
     <div class="hero-section slide-up" style="padding-top: 24px; padding-bottom: 16px;">
         <div class="hero-title">Find Your Photos</div>
         <div class="hero-subtitle">
-            Upload a selfie and our AI will find all your event photos in seconds.
+            Upload a selfie and our AI will find all your event photos in 30 seconds.
             Powered by facial recognition technology.
         </div>
     </div>
@@ -148,7 +149,7 @@ def show_guest_portal(event_id_param: str = None):
                         {stages[i][0]} {stages[i][1]}...
                     </div>
                     """, unsafe_allow_html=True)
-                    time.sleep(0.3)
+                    time.sleep(1)
 
                 # Perform actual search
                 try:
@@ -202,7 +203,7 @@ def show_guest_portal(event_id_param: str = None):
                             col = cols[idx % 3]
                             with col:
                                 st.image(photo["download_url"],
-                                         use_container_width=True)
+                                         use_column_width=True)
                                 photo_id = photo.get("photo_id", idx)
                                 st.markdown(f"""
                                 <a href="{photo['download_url']}" target="_blank"
@@ -221,6 +222,15 @@ def show_guest_portal(event_id_param: str = None):
                     else:
                         st.error("Search failed. Please try again.")
 
+                except requests.exceptions.HTTPError as he:
+                    stage_placeholder.empty()
+                    status_text.empty()
+                    # Extract the user-friendly message from the backend JSON response
+                    try:
+                        detail = he.response.json().get("detail", str(he))
+                    except Exception:
+                        detail = str(he)
+                    st.warning(f"⚠️ {detail}")
                 except Exception as e:
                     stage_placeholder.empty()
                     status_text.empty()

@@ -16,6 +16,16 @@ def show_event_workspace(event_id: str):
         st.error(f"Could not load event: {e}")
         return
 
+    # ── Back Navigation ──────────────────────────────────────────────────
+    col_back, _ = st.columns([1.5, 8.5])
+    with col_back:
+        if st.button("← Back to Events", key="btn_back_to_events", use_container_width=True):
+            st.session_state.current_event_id = None
+            st.session_state.current_page = "events"
+            st.rerun()
+
+    st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
+
     # ── Workspace Header ─────────────────────────────────────────────────
     etype = event.get("event_type", "Event")
     type_emoji = {

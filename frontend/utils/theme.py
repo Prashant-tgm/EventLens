@@ -61,72 +61,42 @@ header[data-testid="stHeader"] {{
     border-bottom: 1px solid {c["border"]} !important;
 }}
 
-/* ── Sidebar ─────────────────────────────────────────────────────────── */
-section[data-testid="stSidebar"] {{
-    background: {c["bg_secondary"]} !important;
-    border-right: 1px solid {c["border"]} !important;
-    padding-top: 1rem;
-}}
-section[data-testid="stSidebar"] .stMarkdown p,
-section[data-testid="stSidebar"] .stMarkdown span,
-section[data-testid="stSidebar"] .stMarkdown label {{
-    color: {c["text_muted"]} !important;
-    font-size: 0.875rem;
-}}
-section[data-testid="stSidebar"] .stMarkdown h1,
-section[data-testid="stSidebar"] .stMarkdown h2,
-section[data-testid="stSidebar"] .stMarkdown h3 {{
-    color: {c["text_primary"]} !important;
-}}
-
-/* Sidebar radio buttons → Linear nav style */
-section[data-testid="stSidebar"] [data-testid="stRadio"] > div {{
-    gap: 2px !important;
-}}
-section[data-testid="stSidebar"] [data-testid="stRadio"] label {{
-    background: transparent !important;
-    border-radius: 6px !important;
-    padding: 8px 12px !important;
-    color: {c["text_muted"]} !important;
-    font-weight: 500 !important;
-    font-size: 0.875rem !important;
-    transition: all 0.15s ease !important;
-    border: none !important;
-    cursor: pointer !important;
-}}
-section[data-testid="stSidebar"] [data-testid="stRadio"] label:hover {{
-    background: {c["bg_tertiary"]} !important;
-    color: {c["text_primary"]} !important;
-}}
-section[data-testid="stSidebar"] [data-testid="stRadio"] label[data-checked="true"],
-section[data-testid="stSidebar"] [data-testid="stRadio"] [aria-checked="true"] {{
-    background: {c["accent_glow"]} !important;
-    color: {c["text_primary"]} !important;
-}}
-/* Hide the radio circle */
-section[data-testid="stSidebar"] [data-testid="stRadio"] input {{
+/* ── Sidebar Hide & Toggle Hide ───────────────────────────────────────── */
+[data-testid="stSidebar"], [data-testid="collapsedControl"] {{
     display: none !important;
 }}
 
-/* Sidebar divider */
-section[data-testid="stSidebar"] hr {{
-    border-color: {c["border"]} !important;
-    margin: 0.75rem 0 !important;
+/* ── Horizontal Navigation Bar (styled from st.radio) ─────────────────── */
+div[data-testid="stRadio"] > div[role="radiogroup"] {{
+    flex-direction: row !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
 }}
-
-/* Sidebar buttons */
-section[data-testid="stSidebar"] button {{
+div[data-testid="stRadio"] label {{
     background: transparent !important;
-    border: 1px solid {c["border"]} !important;
-    color: {c["text_muted"]} !important;
     border-radius: 6px !important;
-    font-size: 0.8rem !important;
+    padding: 6px 14px !important;
+    color: {c["text_muted"]} !important;
+    font-weight: 500 !important;
+    font-size: 0.85rem !important;
     transition: all 0.15s ease !important;
+    border: 1px solid {c["border"]} !important;
+    cursor: pointer !important;
 }}
-section[data-testid="stSidebar"] button:hover {{
+div[data-testid="stRadio"] label:hover {{
     background: {c["bg_tertiary"]} !important;
-    border-color: {c["border_hover"]} !important;
     color: {c["text_primary"]} !important;
+    border-color: {c["border_hover"]} !important;
+}}
+div[data-testid="stRadio"] label[data-checked="true"],
+div[data-testid="stRadio"] [aria-checked="true"] {{
+    background: {c["accent_glow"]} !important;
+    color: {c["text_primary"]} !important;
+    border-color: {c["accent"]} !important;
+}}
+/* Hide the default radio check circle */
+div[data-testid="stRadio"] input {{
+    display: none !important;
 }}
 
 /* ── Main content area ───────────────────────────────────────────────── */
