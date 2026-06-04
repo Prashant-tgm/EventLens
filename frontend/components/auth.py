@@ -105,12 +105,3 @@ def show_auth_page():
                             st.error(f"Registration failed: {e}")
 
         st.markdown('</div>', unsafe_allow_html=True)
-
-    # Footer
-    st.markdown("""
-    <div style="text-align: center; margin-top: 48px; padding: 16px;">
-        <p style="color: #475569; font-size: 0.7rem;">
-            EventLens v2.0 · AI-Powered Event Photo Retrieval Platform
-        </p>
-    </div>
-    """, unsafe_allow_html=True)

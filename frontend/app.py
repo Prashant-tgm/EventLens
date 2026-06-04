@@ -25,7 +25,7 @@ _defaults = {
     "email": "",
     "user_role": "",
     "user_id": None,
-    "current_page": "login",
+    "current_page": "landing",
     "current_event_id": None,
     "workspace_tab": "Overview",
 }
@@ -40,18 +40,48 @@ event_id_param = query_params.get("event_id")
 
 # ── Header Navigation for Unauthenticated ────────────────────────────────
 if not st.session_state.authenticated:
-    c_logo, _ = st.columns([3, 7])
-    with c_logo:
-        st.markdown(get_logo_html(), unsafe_allow_html=True)
-
-    st.markdown("<hr style='margin: 8px 0 24px 0; opacity: 0.3;'>", unsafe_allow_html=True)
 
     if event_id_param:
+        # Guest QR flow — show header + guest portal
+        c_logo, _ = st.columns([3, 7])
+        with c_logo:
+            st.markdown(get_logo_html(), unsafe_allow_html=True)
+        st.markdown("<hr style='margin: 8px 0 24px 0; opacity: 0.3;'>", unsafe_allow_html=True)
+
         from components.guest import show_guest_portal
         show_guest_portal(event_id_param)
-    else:
+
+    elif st.session_state.current_page == "login":
+        # Auth form page
+        c_logo, _, c_back = st.columns([3, 5, 2])
+        with c_logo:
+            st.markdown(get_logo_html(), unsafe_allow_html=True)
+        with c_back:
+            if st.button("← Back to Home", key="back_to_landing"):
+                st.session_state.current_page = "landing"
+                st.rerun()
+        st.markdown("<hr style='margin: 8px 0 24px 0; opacity: 0.3;'>", unsafe_allow_html=True)
+
         from components.auth import show_auth_page
         show_auth_page()
+
+    else:
+        # Landing page (default for unauthenticated)
+        c_logo, _, c_login = st.columns([3, 5, 2])
+        with c_logo:
+            st.markdown(get_logo_html(), unsafe_allow_html=True)
+        with c_login:
+            if st.button("Sign In →", key="landing_signin"):
+                st.session_state.current_page = "login"
+                st.rerun()
+        st.markdown("<hr style='margin: 8px 0 24px 0; opacity: 0.3;'>", unsafe_allow_html=True)
+
+        from components.landing import show_landing_page
+        show_landing_page()
+
+    # Footer on all unauthenticated pages
+    from components.footer import show_footer
+    show_footer()
 
 # ── Authenticated Workspace ──────────────────────────────────────────────
 else:
@@ -134,3 +164,7 @@ else:
     else:
         from components.dashboard import show_dashboard
         show_dashboard()
+
+    # Footer on authenticated pages
+    from components.footer import show_footer
+    show_footer()
