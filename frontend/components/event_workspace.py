@@ -378,13 +378,57 @@ def _render_settings(event: dict, event_id: str):
     st.markdown("<h3>Guest Access Link</h3>", unsafe_allow_html=True)
 
     search_url = f"http://localhost:8501/?event_id={event_id}"
-    st.code(search_url)
-    st.markdown("""
-    <div style="color: #475569; font-size: 0.8rem;">
-        Share this URL or print the QR code for event attendees. They can upload a selfie
-        to instantly find all their photos.
-    </div>
-    """, unsafe_allow_html=True)
+    
+    col_link, col_qr = st.columns([3, 2])
+    with col_link:
+        st.code(search_url)
+        st.markdown("""
+        <div style="color: #475569; font-size: 0.8rem; margin-bottom: 16px;">
+            Share this URL or print the QR code for event attendees. They can scan it to instantly upload a selfie
+            and find all their photos.
+        </div>
+        """, unsafe_allow_html=True)
+        
+        generate_qr = st.button("📸 Generate QR Code", key=f"gen_qr_{event_id}", use_container_width=True)
+
+    with col_qr:
+        if generate_qr or st.session_state.get(f"show_qr_{event_id}", False):
+            st.session_state[f"show_qr_{event_id}"] = True
+            
+            import qrcode
+            import io
+            
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_H,
+                box_size=10,
+                border=4,
+            )
+            qr.add_data(search_url)
+            qr.make(fit=True)
+            
+            img = qr.make_image(fill_color="black", back_color="white")
+            
+            buf = io.BytesIO()
+            img.save(buf, format="PNG")
+            byte_im = buf.getvalue()
+            
+            # Display QR code nicely framed
+            st.markdown("""
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; 
+                        background: white; padding: 12px; border-radius: 8px; width: 174px; margin: 0 auto 12px;">
+            """, unsafe_allow_html=True)
+            st.image(byte_im, width=150)
+            st.markdown("</div>", unsafe_allow_html=True)
+            
+            st.download_button(
+                label="📥 Download QR Image",
+                data=byte_im,
+                file_name=f"event_{event_id}_qr.png",
+                mime="image/png",
+                use_container_width=True,
+                key=f"dl_qr_{event_id}"
+            )
 
     # Danger Zone
     st.markdown("<div style='height: 32px;'></div>", unsafe_allow_html=True)

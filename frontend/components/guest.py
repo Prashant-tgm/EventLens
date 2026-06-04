@@ -149,7 +149,7 @@ def show_guest_portal(event_id_param: str = None):
                         {stages[i][0]} {stages[i][1]}...
                     </div>
                     """, unsafe_allow_html=True)
-                    time.sleep(1)
+                    time.sleep(2)
 
                 # Perform actual search
                 try:
