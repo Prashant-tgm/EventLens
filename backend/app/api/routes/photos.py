@@ -33,6 +33,18 @@ def initiate_batch_upload(
     Step 1: Generate pre-signed PUT URLs so the client can upload directly to S3/MinIO.
     """
     check_event_access(db, current_user, event_id)
+
+    # Validate file extensions
+    ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".heic"}
+    from pathlib import Path
+    for filename in req_in.filenames:
+        ext = Path(filename).suffix.lower()
+        if ext not in ALLOWED_EXTENSIONS:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"File type '{ext}' is not allowed. Accepted: {', '.join(sorted(ALLOWED_EXTENSIONS))}",
+            )
+
     upload_id = str(uuid.uuid4())
 
     upload = Upload(
@@ -111,3 +123,73 @@ def get_upload_status(
         "faces_extracted": upload.faces_extracted,
         "created_at": upload.created_at,
     }
+
+
+@router.get("/{event_id}/gallery")
+def get_event_gallery(
+    event_id: str,
+    page: int = 1,
+    limit: int = 20,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    storage: StorageManager = Depends(get_storage_manager),
+):
+    """Paginated photo gallery for an event."""
+    check_event_access(db, current_user, event_id)
+
+    total = db.query(Photo).filter(Photo.event_id == event_id).count()
+    offset = (page - 1) * limit
+
+    photos = (
+        db.query(Photo)
+        .filter(Photo.event_id == event_id)
+        .order_by(Photo.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+    return {
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "photos": [
+            {
+                "photo_id": p.photo_id,
+                "image_path": p.image_path,
+                "download_url": storage.generate_presigned_download_url(p.image_path),
+                "created_at": str(p.created_at) if p.created_at else None,
+            }
+            for p in photos
+        ],
+    }
+
+
+@router.get("/{event_id}/uploads")
+def list_event_uploads(
+    event_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Retrieve all upload batches for a specific event."""
+    from app.api.routes.photos import check_event_access
+    check_event_access(db, current_user, event_id)
+    
+    uploads = (
+        db.query(Upload)
+        .filter(Upload.event_id == event_id)
+        .order_by(Upload.created_at.desc())
+        .all()
+    )
+    
+    return [
+        {
+            "upload_id": u.upload_id,
+            "status": u.status,
+            "total_files": u.total_files,
+            "processed_files": u.processed_files,
+            "faces_extracted": u.faces_extracted,
+            "created_at": str(u.created_at) if u.created_at else None,
+        }
+        for u in uploads
+    ]

@@ -1,5 +1,5 @@
 """
-EventSnap AI — Main application entry point.
+EventLens AI — Main application entry point.
 Linear-inspired dark SaaS shell with workspace navigation.
 """
 import streamlit as st
@@ -28,10 +28,15 @@ _defaults = {
     "current_page": "landing",
     "current_event_id": None,
     "workspace_tab": "Overview",
+    "auth_token": None,
 }
 for key, val in _defaults.items():
     if key not in st.session_state:
         st.session_state[key] = val
+
+# Restore API client token from session state (survives Streamlit script reruns)
+if st.session_state.get("auth_token"):
+    api_client.set_token(st.session_state["auth_token"])
 
 # ── Check for Guest QR Code Flow ─────────────────────────────────────────
 query_params = st.query_params

@@ -17,6 +17,8 @@ from typing import List, Tuple
 import cv2
 import insightface
 import numpy as np
+from PIL import Image, ExifTags
+import io
 from celery import Celery
 from sqlalchemy.orm import Session
 
@@ -32,7 +34,7 @@ settings = get_settings()
 
 # ── Celery app (single instance, shared with clustering.py) ─────────────
 celery_app = Celery(
-    "eventsnap",
+    "eventlens",
     broker=settings.REDIS_URL,
     backend=settings.REDIS_URL,
 )
@@ -51,16 +53,51 @@ _face_app: insightface.app.FaceAnalysis | None = None
 def _get_face_app() -> insightface.app.FaceAnalysis:
     global _face_app
     if _face_app is None:
+        import onnxruntime
+        available_providers = onnxruntime.get_available_providers()
+        if "CUDAExecutionProvider" in available_providers:
+            providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
+            logger.info("GPU detected — using CUDA for face analysis")
+        else:
+            providers = ["CPUExecutionProvider"]
+            logger.info("No GPU detected — using CPU for face analysis")
         _face_app = insightface.app.FaceAnalysis(
             name="buffalo_l",
-            providers=["CUDAExecutionProvider", "CPUExecutionProvider"],
+            providers=providers,
         )
         _face_app.prepare(ctx_id=0, det_size=(640, 640))
-        logger.info("InsightFace buffalo_l model loaded successfully")
+        logger.info("InsightFace buffalo_l model loaded successfully (providers: %s)", providers)
     return _face_app
 
 
 # ── Image helpers ────────────────────────────────────────────────────────
+
+def _apply_exif_rotation(image_bytes: bytes) -> np.ndarray:
+    """Correct image orientation using EXIF metadata (common for phone photos)."""
+    try:
+        pil_img = Image.open(io.BytesIO(image_bytes))
+        try:
+            exif = pil_img._getexif()
+            if exif:
+                for tag, value in exif.items():
+                    if ExifTags.TAGS.get(tag) == 'Orientation':
+                        if value == 3:
+                            pil_img = pil_img.rotate(180, expand=True)
+                        elif value == 6:
+                            pil_img = pil_img.rotate(270, expand=True)
+                        elif value == 8:
+                            pil_img = pil_img.rotate(90, expand=True)
+                        break
+        except (AttributeError, KeyError):
+            pass
+        # Convert PIL RGB → OpenCV BGR
+        rgb = np.array(pil_img.convert('RGB'))
+        return cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+    except Exception:
+        # Fallback to standard OpenCV decode if PIL fails
+        nparr = np.frombuffer(image_bytes, np.uint8)
+        return cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
 
 def _estimate_blur(face_img: np.ndarray) -> float:
     """Laplacian variance — higher is sharper."""
@@ -91,8 +128,7 @@ def extract_and_assess_faces(
     Returns list of ``(bbox_xywh, quality_score, embedding_512)`` tuples.
     Raises ValueError if the image cannot be decoded.
     """
-    nparr = np.frombuffer(image_bytes, np.uint8)
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    img = _apply_exif_rotation(image_bytes)
     if img is None:
         raise ValueError("Could not decode image bytes")
 

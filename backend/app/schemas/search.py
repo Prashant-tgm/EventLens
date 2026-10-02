@@ -5,6 +5,7 @@ class SearchResultPhoto(BaseModel):
     photo_id: int
     image_path: str
     download_url: str
+    download_token: str = ""
 
 class SelfieSearchResponse(BaseModel):
     success: bool

@@ -88,7 +88,7 @@ def login_for_access_token(
 @router.post("/google", response_model=Token)
 def login_with_google(id_token: str, db: Session = Depends(get_db)):
     """
-    Exchange a Google ID token for an EventSnap JWT.
+    Exchange a Google ID token for an EventLens JWT.
 
     Requires the ``google-auth`` library.  The token is verified
     against Google's public certificates.

@@ -3,7 +3,7 @@ FROM python:3.10-slim
 # Install system dependencies for OpenCV and AI models
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0 \
     curl \
     && rm -rf /var/lib/apt/lists/*
@@ -17,8 +17,11 @@ COPY requirements.txt requirements-ai.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install --no-cache-dir -r requirements-ai.txt
 
+# Pre-download InsightFace buffalo_l model to avoid cold-start downloads
+RUN python -c "import insightface; app = insightface.app.FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider']); app.prepare(ctx_id=0, det_size=(640, 640)); print('Model baked successfully')"
+
 # Copy source code
-COPY . .
+COPY .  .
 
 EXPOSE 8000
 

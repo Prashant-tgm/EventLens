@@ -3,6 +3,7 @@ Dashboard — Linear-inspired command center with glassmorphism metric cards.
 """
 import streamlit as st
 from utils.api_client import api_client
+from utils import cached_api
 from utils.theme import metric_card, status_badge
 from datetime import datetime
 
@@ -36,7 +37,7 @@ def show_dashboard():
 def _show_owner_dashboard():
     """Owner / Photographer dashboard with real metrics."""
     try:
-        stats = api_client.get_owner_analytics()
+        stats = cached_api.get_owner_analytics()
     except Exception as e:
         st.error(f"Could not load analytics: {e}")
         return
@@ -101,7 +102,7 @@ def _show_owner_dashboard():
     """, unsafe_allow_html=True)
 
     try:
-        events = api_client.get_events()
+        events = cached_api.get_events()
         if not events:
             st.markdown("""
             <div class="glass-card" style="text-align: center; padding: 48px 24px;">
@@ -150,7 +151,7 @@ def _show_owner_dashboard():
 def _show_admin_dashboard():
     """System-wide admin dashboard."""
     try:
-        stats = api_client.get_admin_analytics()
+        stats = cached_api.get_admin_analytics()
     except Exception as e:
         st.error(f"Could not load admin stats: {e}")
         return

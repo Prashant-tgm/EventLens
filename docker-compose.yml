@@ -1,26 +1,27 @@
 services:
   db:
     image: ankane/pgvector:v0.5.1
-    container_name: eventsnap_db
+    container_name: eventlens_db
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: eventsnap
+      POSTGRES_DB: eventlens
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password123
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -d eventsnap" ]
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d eventlens" ]
       interval: 5s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7-alpine
-    container_name: eventsnap_redis
+    container_name: eventlens_redis
     ports:
       - "6380:6379"
+    command: redis-server --appendonly yes --appendfsync everysec
     volumes:
       - redis_data:/data
     healthcheck:
@@ -31,7 +32,7 @@ services:
 
   minio:
     image: minio/minio:RELEASE.2024-01-16T16-07-38Z
-    container_name: eventsnap_minio
+    container_name: eventlens_minio
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -42,8 +43,8 @@ services:
     volumes:
       - minio_data:/data
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
-      interval: 5s
+      test: [ "CMD", "mc", "ready", "local" ]
+      interval: 10s
       timeout: 5s
       retries: 5
 
@@ -51,10 +52,15 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: eventsnap_backend
+    container_name: eventlens_backend
     ports:
       - "8000:8000"
     env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://postgres:password123@db:5432/eventlens
+      - REDIS_URL=redis://redis:6379/0
+      - MINIO_ENDPOINT=minio:9000
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
     depends_on:
       db:
         condition: service_healthy
@@ -67,9 +73,13 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: eventsnap_celery_worker
+    container_name: eventlens_celery_worker
     command: celery -A app.services.pipeline:celery_app worker --loglevel=info --concurrency=2
     env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://postgres:password123@db:5432/eventlens
+      - REDIS_URL=redis://redis:6379/0
+      - MINIO_ENDPOINT=minio:9000
     depends_on:
       redis:
         condition: service_healthy
@@ -82,11 +92,12 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: eventsnap_frontend
+    container_name: eventlens_frontend
     ports:
       - "8501:8501"
     environment:
       - BACKEND_URL=http://backend:8000
+      - FRONTEND_URL=http://localhost:8501
     depends_on:
       - backend
 

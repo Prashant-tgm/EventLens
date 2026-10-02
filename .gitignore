@@ -32,4 +32,10 @@ storage/
 LOCAL_TESTING_AND_DEPLOYMENT.md
 
 implementation_plan.md
-
+tries/
+EVENTLENS_.mp4
+AWS_DEPLOYMENT.md
+EventLens_Engineering_Bible.md
+GCP_DEPLOYMENT.md
+implementation_plan1.md
+config.py

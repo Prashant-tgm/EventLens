@@ -1,10 +1,10 @@
 """
-Analytics — Dedicated analytics page with metrics and charts.
+Analytics — Dedicated analytics page with metrics and real charts.
 """
 import streamlit as st
 import pandas as pd
-import numpy as np
 from utils.api_client import api_client
+from utils import cached_api
 from utils.theme import metric_card
 
 
@@ -33,7 +33,7 @@ def show_analytics():
 def _show_owner_analytics():
     """Owner / photographer analytics."""
     try:
-        stats = api_client.get_owner_analytics()
+        stats = cached_api.get_owner_analytics()
     except Exception as e:
         st.error(f"Could not load analytics: {e}")
         return
@@ -94,46 +94,49 @@ def _show_owner_analytics():
 
     st.markdown("<div style='height: 24px;'></div>", unsafe_allow_html=True)
 
-    # ── Trend Charts ─────────────────────────────────────────────────────
+    # ── Trend Charts (Real Data) ─────────────────────────────────────────
     st.markdown("<h3>Activity Trends</h3>", unsafe_allow_html=True)
 
-    st.markdown("""
-    <div style="color: #475569; font-size: 0.8rem; margin-bottom: 12px;">
-        Simulated trend data — will use real time-series data when available.
-    </div>
-    """, unsafe_allow_html=True)
+    try:
+        trend_data = cached_api.get_analytics_trends()
+        if trend_data and trend_data.get("dates"):
+            chart_tabs = st.tabs(["Searches", "Downloads"])
 
-    chart_tabs = st.tabs(["Uploads", "Searches", "Downloads"])
+            with chart_tabs[0]:
+                df = pd.DataFrame({
+                    "Searches": trend_data.get("searches", []),
+                }, index=pd.to_datetime(trend_data["dates"]))
+                st.area_chart(df, color="#10B981")
 
-    with chart_tabs[0]:
-        chart_data = pd.DataFrame(
-            np.random.randint(0, 50, size=(14, 1)),
-            columns=["Uploads"],
-            index=pd.date_range(end=pd.Timestamp.now(), periods=14, freq="D"),
-        )
-        st.area_chart(chart_data, color="#7C3AED")
-
-    with chart_tabs[1]:
-        chart_data = pd.DataFrame(
-            np.random.randint(0, 30, size=(14, 1)),
-            columns=["Searches"],
-            index=pd.date_range(end=pd.Timestamp.now(), periods=14, freq="D"),
-        )
-        st.area_chart(chart_data, color="#10B981")
-
-    with chart_tabs[2]:
-        chart_data = pd.DataFrame(
-            np.random.randint(0, 20, size=(14, 1)),
-            columns=["Downloads"],
-            index=pd.date_range(end=pd.Timestamp.now(), periods=14, freq="D"),
-        )
-        st.area_chart(chart_data, color="#F59E0B")
+            with chart_tabs[1]:
+                df = pd.DataFrame({
+                    "Downloads": trend_data.get("downloads", []),
+                }, index=pd.to_datetime(trend_data["dates"]))
+                st.area_chart(df, color="#F59E0B")
+        else:
+            st.markdown("""
+            <div class="glass-card" style="text-align: center; padding: 32px;">
+                <div style="font-size: 1.5rem; margin-bottom: 8px;">📊</div>
+                <div style="color: #94A3B8; font-size: 0.85rem;">
+                    No trend data available yet. Charts will appear after guest searches and downloads.
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+    except Exception:
+        st.markdown("""
+        <div class="glass-card" style="text-align: center; padding: 32px;">
+            <div style="font-size: 1.5rem; margin-bottom: 8px;">📊</div>
+            <div style="color: #94A3B8; font-size: 0.85rem;">
+                Trend data is not available yet. Charts will appear after guest searches.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
 
 def _show_admin_analytics():
     """System-wide admin analytics."""
     try:
-        stats = api_client.get_admin_analytics()
+        stats = cached_api.get_admin_analytics()
     except Exception as e:
         st.error(f"Could not load admin analytics: {e}")
         return
@@ -165,12 +168,18 @@ def _show_admin_analytics():
 
     st.markdown("<div style='height: 24px;'></div>", unsafe_allow_html=True)
 
-    # ── Growth Chart ─────────────────────────────────────────────────────
+    # ── Growth Chart (Real Data) ─────────────────────────────────────────
     st.markdown("<h3>Platform Growth</h3>", unsafe_allow_html=True)
 
-    chart_data = pd.DataFrame(
-        np.random.randint(0, 100, size=(30, 3)),
-        columns=["Photos", "Searches", "Downloads"],
-        index=pd.date_range(end=pd.Timestamp.now(), periods=30, freq="D"),
-    )
-    st.line_chart(chart_data)
+    try:
+        trend_data = cached_api.get_analytics_trends()
+        if trend_data and trend_data.get("dates"):
+            df = pd.DataFrame({
+                "Searches": trend_data.get("searches", []),
+                "Downloads": trend_data.get("downloads", []),
+            }, index=pd.to_datetime(trend_data["dates"]))
+            st.line_chart(df)
+        else:
+            st.info("No trend data available yet. Charts will populate after platform usage.")
+    except Exception:
+        st.info("Trend data endpoint not available. Charts will populate after platform usage.")

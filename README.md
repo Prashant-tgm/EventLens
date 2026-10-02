@@ -1,10 +1,10 @@
 # EventLens AI
 
-### AI-Powered Event Photo Retrieval Platform (v2.0)
+### AI-Powered Event Photo Retrieval Platform
 
 EventLens AI is a modern cloud-based event photography platform that enables photographers, agencies, and event organizers to automatically organize and deliver photos to attendees using facial recognition. 
 
-Attendees can scan a custom event QR code and upload a selfie to find all of their photos in under 2 seconds.
+Attendees can scan a custom event QR code and upload a selfie to find all of their photos.
 
 ---
 
@@ -87,6 +87,15 @@ e:/Projects/eventSNAP1/
 2. **Background Clustering**: An asynchronous clustering task grouping face embeddings within the *same* event using **HDBSCAN** (with a **DBSCAN** fallback). This builds a `person_id` mapping.
 3. **Event Isolation Engine**: Strict multi-tenant data isolation. All search operations and database queries require and filter on `event_id` to guarantee zero cross-event face leakage.
 4. **Vector Search Engine**: Guests upload a selfie to perform a **pgvector** cosine search. The engine identifies matching faces, expands them to find all photos in their associated person cluster, and returns the unified gallery in under 2 seconds.
+
+---
+
+## 📖 Documentation & Guides
+
+For step-by-step instructions on running, testing, and deploying the platform:
+* **[Local Testing & Deployment Guide](file:///e:/Projects/EventLens/LOCAL_TESTING_AND_DEPLOYMENT.md)** - Run in hybrid local mode or fully containerized via Docker Compose, plus the step-by-step E2E testing script.
+* **[Google Cloud Platform (GCP) Deployment Guide](file:///e:/Projects/EventLens/GCP_DEPLOYMENT.md)** - Step-by-step instructions to deploy to Google Cloud Run, Cloud SQL for PostgreSQL (with pgvector), GCS (S3-compatible XML API mode), and Compute Engine for Celery workers.
+* **[Amazon Web Services (AWS) Deployment Guide](file:///e:/Projects/EventLens/AWS_DEPLOYMENT.md)** - Step-by-step instructions to deploy to ECS Fargate, RDS for PostgreSQL (with pgvector), ElastiCache for Redis, and S3 buckets.
 
 ---
 

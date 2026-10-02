@@ -56,6 +56,7 @@ def show_auth_page():
                         except Exception:
                             st.session_state.user_role = "photographer"
                         st.session_state.current_page = "dashboard"
+                        st.session_state["auth_token"] = api_client.token
                         st.rerun()
                     else:
                         st.error("Invalid email or password. Please try again.")

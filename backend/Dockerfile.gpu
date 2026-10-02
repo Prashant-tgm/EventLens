@@ -1,0 +1,36 @@
+# ── GPU-enabled build: Uses NVIDIA CUDA 11.8 runtime ────────────────────
+FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+
+# Install Python 3.10 and system dependencies for OpenCV
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.10 python3.10-venv python3-pip python3.10-dev \
+    build-essential \
+    libgl1 \
+    libglib2.0-0 \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && update-alternatives --install /usr/bin/python python /usr/bin/python3.10 1 \
+    && update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
+
+WORKDIR /workspace
+
+# Copy requirements files
+COPY requirements.txt requirements-ai.txt requirements-ai-gpu.txt ./
+
+# Install python packages (base + GPU AI deps)
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements-ai-gpu.txt
+
+# Pre-download InsightFace buffalo_l model (use CPU provider at build time;
+# CUDA provider will be selected at runtime when GPU is available)
+RUN python -c "import insightface; app = insightface.app.FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider']); app.prepare(ctx_id=0, det_size=(640, 640)); print('Model baked successfully')"
+
+# Copy source code
+COPY . .
+
+EXPOSE 8000
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

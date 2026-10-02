@@ -77,3 +77,73 @@ def get_admin_analytics(
         total_searches=total_searches,
         total_downloads=total_downloads,
     )
+
+
+@router.get("/trends")
+def get_analytics_trends(
+    days: int = 30,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Real time-series trend data for searches and downloads."""
+    from datetime import datetime, timedelta
+    from sqlalchemy import cast, Date
+
+    start_date = datetime.utcnow() - timedelta(days=days)
+
+    # Get event IDs for this user
+    if current_user.role == "superadmin":
+        event_filter = True  # all events
+    else:
+        event_ids = [
+            row[0]
+            for row in db.query(Event.event_id).filter(Event.owner_id == current_user.user_id).all()
+        ]
+        if not event_ids:
+            return {"dates": [], "searches": [], "downloads": []}
+        event_filter = SearchLog.event_id.in_(event_ids)
+
+    # Search trends
+    search_rows = (
+        db.query(
+            cast(SearchLog.created_at, Date).label("date"),
+            func.count(SearchLog.search_id).label("count"),
+        )
+        .filter(SearchLog.created_at >= start_date)
+        .filter(event_filter)
+        .group_by(cast(SearchLog.created_at, Date))
+        .order_by(cast(SearchLog.created_at, Date))
+        .all()
+    )
+
+    # Download trends
+    if current_user.role == "superadmin":
+        dl_event_filter = True
+    else:
+        dl_event_filter = DownloadLog.event_id.in_(event_ids)
+
+    download_rows = (
+        db.query(
+            cast(DownloadLog.created_at, Date).label("date"),
+            func.count(DownloadLog.download_id).label("count"),
+        )
+        .filter(DownloadLog.created_at >= start_date)
+        .filter(dl_event_filter)
+        .group_by(cast(DownloadLog.created_at, Date))
+        .order_by(cast(DownloadLog.created_at, Date))
+        .all()
+    )
+
+    # Build aligned date series
+    all_dates = sorted(set(
+        [str(r.date) for r in search_rows] +
+        [str(r.date) for r in download_rows]
+    ))
+    search_map = {str(r.date): r.count for r in search_rows}
+    download_map = {str(r.date): r.count for r in download_rows}
+
+    return {
+        "dates": all_dates,
+        "searches": [search_map.get(d, 0) for d in all_dates],
+        "downloads": [download_map.get(d, 0) for d in all_dates],
+    }

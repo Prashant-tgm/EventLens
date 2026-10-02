@@ -1,17 +1,19 @@
 """
-Event CRUD, team invitations, and invitation acceptance.
+Event CRUD, team invitations, invitation acceptance, stats, and cluster visualization.
 """
 import random
 from datetime import datetime
 from typing import List
 
+import numpy as np
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.routes.auth import get_current_user
 from app.db.session import get_db
 from app.models.event import Event, EventMember
-from app.models.face import Invitation
+from app.models.face import Face, Invitation, Person, PersonPhoto, Upload
+from app.models.photo import Photo
 from app.models.user import User
 from app.schemas.event import (
     Event as EventSchema,
@@ -109,7 +111,7 @@ def invite_photographer(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Invite a photographer by email."""
+    """Invite a photographer by email — sends notification via Resend if configured."""
     check_is_owner(db, current_user, event_id)
 
     existing = db.query(User).filter(User.email == invite_in.email).first()
@@ -121,9 +123,33 @@ def invite_photographer(
         if already:
             raise HTTPException(status_code=400, detail="Already a member of this event")
 
-    db.add(Invitation(event_id=event_id, email=invite_in.email, role=invite_in.role, status="pending"))
+    invitation = Invitation(
+        event_id=event_id, email=invite_in.email,
+        role=invite_in.role, status="pending",
+    )
+    db.add(invitation)
     db.commit()
-    return {"status": "success", "message": f"Invitation sent to {invite_in.email}"}
+    db.refresh(invitation)
+
+    # Send email notification (best-effort — invite is saved even if email fails)
+    from app.services.email import send_invitation_email
+
+    event = db.query(Event).filter(Event.event_id == event_id).first()
+    event_name = event.name if event else event_id
+
+    email_sent = send_invitation_email(
+        to_email=invite_in.email,
+        event_name=event_name,
+        inviter_email=current_user.email,
+        invitation_id=invitation.invitation_id,
+    )
+
+    return {
+        "status": "success",
+        "message": f"Invitation sent to {invite_in.email}",
+        "email_sent": email_sent,
+        "invitation_id": invitation.invitation_id,
+    }
 
 
 @router.post("/accept-invite/{invitation_id}")
@@ -147,3 +173,121 @@ def accept_invitation(
     inv.status = "accepted"
     db.commit()
     return {"status": "success", "event_id": inv.event_id}
+
+
+# ---------------------------------------------------------------------------
+# Event Stats
+# ---------------------------------------------------------------------------
+
+@router.get("/{event_id}/stats")
+def get_event_stats(
+    event_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Aggregate statistics for an event: photos, batches, faces, persons."""
+    check_event_access(db, current_user, event_id)
+
+    total_photos = db.query(Photo).filter(Photo.event_id == event_id).count()
+    total_batches = db.query(Upload).filter(Upload.event_id == event_id).count()
+    total_faces = db.query(Face).filter(Face.event_id == event_id).count()
+    total_persons = db.query(Person).filter(Person.event_id == event_id).count()
+    processing_batches = (
+        db.query(Upload)
+        .filter(Upload.event_id == event_id, Upload.status.in_(["pending", "processing"]))
+        .count()
+    )
+
+    return {
+        "total_photos": total_photos,
+        "total_batches": total_batches,
+        "total_faces": total_faces,
+        "total_persons": total_persons,
+        "processing_batches": processing_batches,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Cluster Visualization (t-SNE projection of face embeddings)
+# ---------------------------------------------------------------------------
+
+@router.get("/{event_id}/clusters")
+def get_event_clusters(
+    event_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """2-D t-SNE projection of every face embedding in the event, grouped by person."""
+    check_event_access(db, current_user, event_id)
+
+    # 1. Fetch all faces for the event
+    faces = db.query(Face).filter(Face.event_id == event_id).all()
+    n_faces = len(faces)
+
+    # 2. Build a face_id → person_id lookup from PersonPhoto
+    person_photo_rows = (
+        db.query(PersonPhoto)
+        .join(Person, PersonPhoto.person_id == Person.person_id)
+        .filter(Person.event_id == event_id)
+        .all()
+    )
+    face_to_person: dict[int, int] = {pp.face_id: pp.person_id for pp in person_photo_rows}
+
+    # 3. Fetch all persons for the event
+    persons = db.query(Person).filter(Person.event_id == event_id).all()
+    person_map: dict[int, str] = {p.person_id: p.name for p in persons}
+    total_persons = len(persons)
+
+    # 4. Compute 2-D coordinates via t-SNE (or zeros when < 2 faces)
+    if n_faces >= 2:
+        from sklearn.manifold import TSNE  # already available
+
+        embeddings = np.array([list(f.embedding) for f in faces], dtype=np.float64)
+        # Normalize embeddings (L2-norm per row)
+        norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+        norms[norms == 0] = 1.0  # avoid division by zero
+        embeddings = embeddings / norms
+
+        perplexity = min(30, n_faces - 1)
+        coords = TSNE(
+            n_components=2,
+            perplexity=perplexity,
+            random_state=42,
+        ).fit_transform(embeddings)
+    else:
+        coords = np.zeros((n_faces, 2))
+
+    # 5. Build per-person and unclustered lists
+    person_faces: dict[int, list] = {pid: [] for pid in person_map}
+    unclustered: list[dict] = []
+
+    for idx, face in enumerate(faces):
+        entry = {
+            "face_id": face.face_id,
+            "photo_id": face.photo_id,
+            "x": float(coords[idx, 0]),
+            "y": float(coords[idx, 1]),
+            "quality": float(face.quality_score),
+        }
+        pid = face_to_person.get(face.face_id)
+        if pid is not None and pid in person_faces:
+            person_faces[pid].append(entry)
+        else:
+            unclustered.append(entry)
+
+    persons_out = [
+        {
+            "person_id": pid,
+            "name": person_map[pid],
+            "face_count": len(face_list),
+            "faces": face_list,
+        }
+        for pid, face_list in person_faces.items()
+    ]
+
+    return {
+        "total_faces": n_faces,
+        "total_persons": total_persons,
+        "persons": persons_out,
+        "unclustered": unclustered,
+    }

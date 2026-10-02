@@ -1,6 +1,7 @@
 """
 Guest Portal — Premium selfie-search experience with animated stages.
 """
+import html
 import streamlit as st
 from PIL import Image
 import io
@@ -64,7 +65,7 @@ def show_guest_portal(event_id_param: str = None):
     st.markdown(f"""
     <div class="glass-card fade-in" style="text-align: center; max-width: 560px; margin: 0 auto 24px auto;">
         <div style="font-size: 1.25rem; font-weight: 700; color: #F8FAFC; margin-bottom: 6px;">
-            {event_name}
+            {html.escape(event_name)}
         </div>
         <div style="color: #64748B; font-size: 0.85rem;">
             {"📅 " + str(event_date) + " &nbsp;·&nbsp; " if event_date else ""}
@@ -125,7 +126,7 @@ def show_guest_portal(event_id_param: str = None):
             if st.button("🚀 Search My Photos", use_container_width=True,
                           key="btn_search"):
 
-                # ── Animated Search Stages ───────────────────────────────
+                # ── Search with real-time progress ────────────────────
                 stages = [
                     ("🔍", "Detecting Face"),
                     ("📐", "Aligning"),
@@ -138,20 +139,18 @@ def show_guest_portal(event_id_param: str = None):
                 stage_placeholder = st.empty()
                 status_text = st.empty()
 
-                # Animate through stages
-                for i in range(len(stages)):
-                    stage_placeholder.markdown(
-                        pipeline_stage_html(stages, current_index=i),
-                        unsafe_allow_html=True,
-                    )
-                    status_text.markdown(f"""
-                    <div style="text-align: center; color: #94A3B8; font-size: 0.85rem;">
-                        {stages[i][0]} {stages[i][1]}...
-                    </div>
-                    """, unsafe_allow_html=True)
-                    time.sleep(2)
+                # Show searching state
+                stage_placeholder.markdown(
+                    pipeline_stage_html(stages, current_index=0),
+                    unsafe_allow_html=True,
+                )
+                status_text.markdown("""
+                <div style="text-align: center; color: #94A3B8; font-size: 0.85rem;">
+                    🔍 Analyzing your selfie...
+                </div>
+                """, unsafe_allow_html=True)
 
-                # Perform actual search
+                # Perform actual search (no fake delay)
                 try:
                     search_res = api_client.search_by_selfie(event_id, selfie_bytes)
 
@@ -202,8 +201,10 @@ def show_guest_portal(event_id_param: str = None):
                         for idx, photo in enumerate(photos):
                             col = cols[idx % 3]
                             with col:
-                                st.image(photo["download_url"],
-                                         use_column_width=True)
+                                st.markdown(
+                                    f'<img src="{photo["download_url"]}" style="width:100%; border-radius:8px; margin-bottom:8px;">',
+                                    unsafe_allow_html=True,
+                                )
                                 photo_id = photo.get("photo_id", idx)
                                 st.markdown(f"""
                                 <a href="{photo['download_url']}" target="_blank"

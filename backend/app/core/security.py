@@ -38,3 +38,47 @@ def decode_access_token(token: str) -> Optional[str]:
         return payload.get("sub")
     except JWTError:
         return None
+
+
+def generate_download_token(event_id: str, photo_id: int) -> str:
+    """Create a short-lived HMAC token for secure photo downloads."""
+    import hashlib
+    import hmac
+    import time
+    timestamp = int(time.time())
+    message = f"{event_id}:{photo_id}:{timestamp}"
+    signature = hmac.new(
+        settings.DOWNLOAD_TOKEN_SECRET.encode(),
+        message.encode(),
+        hashlib.sha256,
+    ).hexdigest()
+    return f"{timestamp}:{signature}"
+
+
+def verify_download_token(
+    event_id: str, photo_id: int, token: str,
+) -> bool:
+    """Verify an HMAC download token is valid and not expired."""
+    import hashlib
+    import hmac
+    import time
+    try:
+        parts = token.split(":")
+        if len(parts) != 2:
+            return False
+        timestamp_str, signature = parts
+        timestamp = int(timestamp_str)
+        # Check expiry
+        if time.time() - timestamp > settings.DOWNLOAD_TOKEN_EXPIRY:
+            return False
+        # Verify HMAC
+        message = f"{event_id}:{photo_id}:{timestamp}"
+        expected = hmac.new(
+            settings.DOWNLOAD_TOKEN_SECRET.encode(),
+            message.encode(),
+            hashlib.sha256,
+        ).hexdigest()
+        return hmac.compare_digest(signature, expected)
+    except (ValueError, TypeError):
+        return False
+

@@ -1,1 +1,1 @@
-# EventSnap AI Backend package
+# EventLens AI Backend package

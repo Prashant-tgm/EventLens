@@ -80,7 +80,7 @@ class APIClient:
         return response.json()
 
     # Photo Upload API (Direct S3 upload via Pre-signed URLs)
-    def upload_photos_workflow(self, event_id: str, file_mappings: Dict[str, bytes]) -> str:
+    def upload_photos_workflow(self, event_id: str, file_mappings: Dict[str, bytes], progress_callback=None) -> str:
         """
         Orchestrates direct-to-S3 uploading in three parts:
         1. Request pre-signed URLs from backend.
@@ -99,7 +99,7 @@ class APIClient:
         presigned_urls = initiate_data["urls"]
         
         # 2. Upload each file directly to storage URL
-        for item in presigned_urls:
+        for idx, item in enumerate(presigned_urls):
             filename = item["filename"]
             put_url = item["upload_url"]
             file_bytes = file_mappings[filename]
@@ -108,6 +108,9 @@ class APIClient:
             headers = {"Content-Type": "image/jpeg"}
             put_res = requests.put(put_url, data=file_bytes, headers=headers)
             put_res.raise_for_status()
+            
+            if progress_callback:
+                progress_callback(idx + 1, len(presigned_urls))
             
         # 3. Notify backend that upload is complete to start background job
         complete_url = f"{API_V1}/photos/{event_id}/upload-complete/{upload_id}"
@@ -139,6 +142,40 @@ class APIClient:
 
     def get_admin_analytics(self) -> Dict[str, Any]:
         url = f"{API_V1}/analytics/admin"
+        response = requests.get(url, headers=self.headers)
+        response.raise_for_status()
+        return response.json()
+
+    def get_analytics_trends(self, days: int = 30) -> Dict[str, Any]:
+        url = f"{API_V1}/analytics/trends"
+        response = requests.get(url, headers=self.headers, params={"days": days})
+        response.raise_for_status()
+        return response.json()
+
+    # Gallery API
+    def get_event_gallery(self, event_id: str, page: int = 1, limit: int = 20) -> Dict[str, Any]:
+        url = f"{API_V1}/photos/{event_id}/gallery"
+        response = requests.get(url, headers=self.headers, params={"page": page, "limit": limit})
+        response.raise_for_status()
+        return response.json()
+
+    # Uploads History API
+    def get_event_uploads(self, event_id: str) -> List[Dict[str, Any]]:
+        url = f"{API_V1}/photos/{event_id}/uploads"
+        response = requests.get(url, headers=self.headers)
+        response.raise_for_status()
+        return response.json()
+
+    # Event Stats API
+    def get_event_stats(self, event_id: str) -> Dict[str, Any]:
+        url = f"{API_V1}/events/{event_id}/stats"
+        response = requests.get(url, headers=self.headers)
+        response.raise_for_status()
+        return response.json()
+
+    # Cluster Visualization API
+    def get_event_clusters(self, event_id: str) -> Dict[str, Any]:
+        url = f"{API_V1}/events/{event_id}/clusters"
         response = requests.get(url, headers=self.headers)
         response.raise_for_status()
         return response.json()

@@ -3,9 +3,14 @@ FastAPI application entry-point.
 Registers all routers, sets up CORS, seeds the super-admin on first start.
 """
 import logging
+import warnings
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
 from app.api.routes import analytics, auth, downloads, events, health, photos, search
@@ -18,19 +23,8 @@ from app.models.user import User
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-app = FastAPI(
-    title=settings.APP_NAME,
-    version="2.0.0",
-    description="AI-Powered Event Photo Retrieval Platform",
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# ── Rate limiter (shared across routes) ──────────────────────────────────
+limiter = Limiter(key_func=get_remote_address)
 
 
 def _seed_superadmin() -> None:
@@ -52,13 +46,50 @@ def _seed_superadmin() -> None:
         db.close()
 
 
-@app.on_event("startup")
-def on_startup() -> None:
+def _validate_settings() -> None:
+    """Warn if dangerous default credentials are in use."""
+    DANGEROUS_DEFAULTS = {
+        "JWT_SECRET": "change-me-in-production-use-openssl-rand-hex-32",
+        "SUPERADMIN_PASSWORD": "AdminSecurePassword123!",
+        "DOWNLOAD_TOKEN_SECRET": "download-token-secret-change-in-production",
+    }
+    for key, default_val in DANGEROUS_DEFAULTS.items():
+        if getattr(settings, key, None) == default_val:
+            warnings.warn(
+                f"⚠️  {key} is using the insecure default value. "
+                f"Change it before deploying to production.",
+                stacklevel=2,
+            )
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup and shutdown lifecycle."""
     settings.storage_root.mkdir(parents=True, exist_ok=True)
     if settings.AUTO_CREATE_TABLES:
         create_db_and_tables()
     _seed_superadmin()
+    _validate_settings()
+    yield
 
+
+app = FastAPI(
+    title=settings.APP_NAME,
+    version="2.1.0",
+    description="AI-Powered Event Photo Retrieval Platform",
+    lifespan=lifespan,
+)
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Register routers
 app.include_router(health.router, prefix=settings.API_V1_PREFIX)

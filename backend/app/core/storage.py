@@ -30,6 +30,17 @@ class StorageManager:
                 config=Config(signature_version="s3v4"),
                 region_name="us-east-1",
             )
+            # Create a separate client for pre-signed URLs that signs them with localhost:9000
+            # so they match the browser's Host header (fixes 403 Forbidden).
+            # Boto3 generate_presigned_url is purely mathematical and doesn't connect.
+            self.s3_presigned = boto3.client(
+                "s3",
+                endpoint_url=f"{'https' if settings.MINIO_SECURE else 'http'}://localhost:9000",
+                aws_access_key_id=settings.MINIO_ACCESS_KEY,
+                aws_secret_access_key=settings.MINIO_SECRET_KEY,
+                config=Config(signature_version="s3v4"),
+                region_name="us-east-1",
+            )
             self.bucket = settings.MINIO_BUCKET
         else:
             self.s3 = boto3.client(
@@ -38,6 +49,7 @@ class StorageManager:
                 aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
                 region_name=settings.AWS_REGION,
             )
+            self.s3_presigned = self.s3
             self.bucket = settings.S3_BUCKET_NAME
 
         self._ensure_bucket()
@@ -72,7 +84,7 @@ class StorageManager:
 
     def generate_presigned_download_url(self, object_key: str, expires_in: int = 3600) -> str:
         try:
-            return self.s3.generate_presigned_url(
+            return self.s3_presigned.generate_presigned_url(
                 "get_object",
                 Params={"Bucket": self.bucket, "Key": object_key},
                 ExpiresIn=expires_in,

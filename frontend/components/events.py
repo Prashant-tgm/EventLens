@@ -1,9 +1,11 @@
 """
-Events Management — Card-grid event listing and creation form.
+Events Management — Card-grid event listing with live stats and creation form.
 """
+import html
 import streamlit as st
 import datetime
 from utils.api_client import api_client
+from utils import cached_api
 from utils.theme import status_badge
 
 
@@ -67,6 +69,7 @@ def show_events_management():
                                 )
                                 st.success(f"Event created! ID: {res['event_id']}")
                                 st.session_state.show_create_event_form = False
+                                cached_api.clear_all_caches()
                                 st.rerun()
                             except Exception as e:
                                 st.error(f"Failed to create event: {e}")
@@ -75,7 +78,7 @@ def show_events_management():
 
     # ── Event Cards Grid ─────────────────────────────────────────────────
     try:
-        events = api_client.get_events()
+        events = cached_api.get_events()
     except Exception as e:
         st.error(f"Could not load events: {e}")
         return
@@ -95,6 +98,20 @@ def show_events_management():
         """, unsafe_allow_html=True)
         return
 
+    # Fetch stats for all events (batch)
+    event_stats_cache = {}
+    for event in events:
+        eid = event["event_id"]
+        try:
+            stats = cached_api.get_event_stats(eid)
+            event_stats_cache[eid] = stats
+        except Exception:
+            event_stats_cache[eid] = {
+                "total_photos": 0, "total_batches": 0,
+                "total_faces": 0, "total_persons": 0,
+                "processing_batches": 0,
+            }
+
     # Render event cards in 2-column grid
     cols = st.columns(2)
     for idx, event in enumerate(events):
@@ -104,6 +121,7 @@ def show_events_management():
             date_str = event.get("date", "—")
             loc = event.get("location", "—")
             desc = event.get("description", "")
+            stats = event_stats_cache.get(eid, {})
 
             # Type to emoji mapping
             type_emoji = {
@@ -111,21 +129,52 @@ def show_events_management():
                 "Marathon": "🏃", "Birthday": "🎂", "Corporate": "💼",
             }.get(etype, "📁")
 
+            total_photos = stats.get("total_photos", 0)
+            total_faces = stats.get("total_faces", 0)
+            total_persons = stats.get("total_persons", 0)
+            total_batches = stats.get("total_batches", 0)
+            processing = stats.get("processing_batches", 0)
+
+            # Determine event status
+            if processing > 0:
+                card_status = status_badge("Processing", "processing")
+            elif total_photos > 0:
+                card_status = status_badge("Active", "active")
+            else:
+                card_status = status_badge("New", "completed")
+
             st.markdown(f"""
             <div class="event-card">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                     <div>
-                        <div class="event-name">{type_emoji} {event["name"]}</div>
+                        <div class="event-name">{type_emoji} {html.escape(event["name"])}</div>
                         <div class="event-meta">📅 {date_str} &nbsp;·&nbsp; 📍 {loc}</div>
                     </div>
-                    {status_badge("Active", "active")}
+                    {card_status}
                 </div>
                 <div style="color: #64748B; font-size: 0.8rem; margin-top: 8px;
                             max-height: 40px; overflow: hidden;">
-                    {desc[:100] + "..." if len(desc) > 100 else desc}
+                    {html.escape(desc[:100] + "..." if len(desc) > 100 else desc)}
                 </div>
-                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(148,163,184,0.12);
-                            display: flex; justify-content: space-between; align-items: center;">
+                <div class="event-stats">
+                    <div class="stat-item">
+                        <span class="stat-value">{total_photos}</span>
+                        <span class="stat-label">Photos</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">{total_faces}</span>
+                        <span class="stat-label">Faces</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">{total_persons}</span>
+                        <span class="stat-label">People</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">{total_batches}</span>
+                        <span class="stat-label">Batches</span>
+                    </div>
+                </div>
+                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(148,163,184,0.12);">
                     <span style="font-size: 0.7rem; color: #475569; font-family: monospace;">{eid}</span>
                 </div>
             </div>

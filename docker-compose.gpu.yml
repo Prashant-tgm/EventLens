@@ -1,0 +1,37 @@
+# ── GPU Override ─────────────────────────────────────────────────────────
+# Usage:  docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
+#
+# Prerequisites:
+#   1. NVIDIA GPU with CUDA 11.8+ support
+#   2. NVIDIA Container Toolkit installed:
+#        https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html
+#   3. Docker configured with nvidia runtime:
+#        sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker
+#
+# This override swaps the CPU Dockerfile for the GPU variant and
+# reserves the GPU device for both the backend and celery worker.
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.gpu
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.gpu
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

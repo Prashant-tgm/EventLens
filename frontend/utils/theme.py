@@ -640,6 +640,23 @@ pre {{
     border-radius: 8px;
 }}
 
+/* ── Progress Bars ────────────────────────────────────────────────────── */
+.stProgress > div > div > div {{
+    background: linear-gradient(90deg, {c["accent"]}, {c["accent_light"]}) !important;
+    border-radius: 4px !important;
+}}
+.stProgress > div > div {{
+    background: {c["bg_tertiary"]} !important;
+    border-radius: 4px !important;
+}}
+
+/* ── Plotly chart dark theme overrides ────────────────────────────────── */
+[data-testid="stPlotlyChart"] {{
+    border: 1px solid {c["glass_border"]};
+    border-radius: 14px;
+    overflow: hidden;
+}}
+
 /* ── Responsive ──────────────────────────────────────────────────────── */
 @media (max-width: 768px) {{
     .hero-title {{ font-size: 2rem; }}
@@ -718,7 +735,7 @@ def pipeline_stage_html(stages: list, current_index: int = -1) -> str:
 
 
 def get_logo_image():
-    """Load the logo PIL Image from e:\\Projects\\eventSNAP1\\image.png."""
+    """Load the logo PIL Image from the project root."""
     current_dir = os.path.dirname(os.path.abspath(__file__))
     paths_to_try = [
         os.path.abspath(os.path.join(current_dir, "..", "..", "image.png")),
